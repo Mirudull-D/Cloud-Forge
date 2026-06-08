@@ -2,3 +2,12 @@
 INSERT INTO deployments(git_url)
 values ($1)
 Returning *;
+
+-- name: GetAllDeployments :many
+SELECT *
+FROM deployments ;
+
+-- name: GetDeploymentById :one
+SELECT *
+FROM deployments
+WHERE id = $1;

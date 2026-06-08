@@ -27,6 +27,7 @@ func (app *Application) Mount() http.Handler {
 	r.Use(middleware.ClientIPFromRemoteAddr)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.StripSlashes)
 
 	r.Use(middleware.Timeout(60 * time.Second))
 

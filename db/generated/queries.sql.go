@@ -7,6 +7,8 @@ package generated
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const createNewDeployment = `-- name: CreateNewDeployment :one
@@ -17,6 +19,65 @@ Returning id, git_url, status, container_id, image_name, logs, created_at, updat
 
 func (q *Queries) CreateNewDeployment(ctx context.Context, gitUrl string) (Deployment, error) {
 	row := q.db.QueryRowContext(ctx, createNewDeployment, gitUrl)
+	var i Deployment
+	err := row.Scan(
+		&i.ID,
+		&i.GitUrl,
+		&i.Status,
+		&i.ContainerID,
+		&i.ImageName,
+		&i.Logs,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAllDeployments = `-- name: GetAllDeployments :many
+SELECT id, git_url, status, container_id, image_name, logs, created_at, updated_at
+FROM deployments
+`
+
+func (q *Queries) GetAllDeployments(ctx context.Context) ([]Deployment, error) {
+	rows, err := q.db.QueryContext(ctx, getAllDeployments)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Deployment
+	for rows.Next() {
+		var i Deployment
+		if err := rows.Scan(
+			&i.ID,
+			&i.GitUrl,
+			&i.Status,
+			&i.ContainerID,
+			&i.ImageName,
+			&i.Logs,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getDeploymentById = `-- name: GetDeploymentById :one
+SELECT id, git_url, status, container_id, image_name, logs, created_at, updated_at
+FROM deployments
+WHERE id = $1
+`
+
+func (q *Queries) GetDeploymentById(ctx context.Context, id uuid.UUID) (Deployment, error) {
+	row := q.db.QueryRowContext(ctx, getDeploymentById, id)
 	var i Deployment
 	err := row.Scan(
 		&i.ID,

@@ -4,6 +4,8 @@ import (
 	"CloudHub/db/generated"
 	"context"
 	"database/sql"
+
+	"github.com/google/uuid"
 )
 
 type Store struct {
@@ -25,4 +27,19 @@ func (s *Store) CreateNewDeployment(ctx context.Context, gitUrl string) (generat
 	}
 	return newDeployment, nil
 
+}
+func (s *Store) GetAllDeployments(ctx context.Context) ([]generated.Deployment, error) {
+	allDeployments, err := s.queries.GetAllDeployments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return allDeployments, nil
+}
+
+func (s *Store) GetDeploymentById(ctx context.Context, deploymentID uuid.UUID) (generated.Deployment, error) {
+	deployment, err := s.queries.GetDeploymentById(ctx, deploymentID)
+	if err != nil {
+		return generated.Deployment{}, err
+	}
+	return deployment, nil
 }
