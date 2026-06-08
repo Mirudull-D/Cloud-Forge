@@ -1,1 +1,17 @@
 package db
+
+import (
+	"database/sql"
+	"log"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
+)
+
+func NewPostgreSqlStorage(connStr string) (*sql.DB, error) {
+	db, err := sql.Open("pgx", connStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return db, nil
+}
