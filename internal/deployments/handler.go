@@ -1,6 +1,7 @@
 package deployments
 
 import (
+	"CloudHub/internal/queue"
 	"CloudHub/internal/types"
 	"CloudHub/internal/utils"
 	"net/http"
@@ -10,11 +11,15 @@ import (
 )
 
 type Handler struct {
-	store *Store
+	store      *Store
+	RedisStore *queue.RedisStore
 }
 
-func NewHandler(store *Store) *Handler {
-	return &Handler{store: store}
+func NewHandler(store *Store, rdb *queue.RedisStore) *Handler {
+	return &Handler{
+		store:      store,
+		RedisStore: rdb,
+	}
 }
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/deployments", func(r chi.Router) {
@@ -25,17 +30,23 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 }
 func (h *Handler) handleNewDeployment(w http.ResponseWriter, r *http.Request) {
 	var payload types.CreateNewDeploymentPayload
+	ctx := r.Context()
 
 	err := utils.ParseJson(r, &payload)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
-	newDeployment, err := h.store.CreateNewDeployment(r.Context(), payload.GitUrl)
+	newDeployment, err := h.store.CreateNewDeployment(ctx, payload.GitUrl)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
+	err = h.RedisStore.PushDeployment(ctx, newDeployment.ID.String())
+	if err != nil {
+		return
+	}
+
 	err = utils.WriteJson(w, http.StatusCreated, newDeployment)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)

@@ -4,6 +4,7 @@ import (
 	"CloudHub/cmd/api"
 	"CloudHub/config"
 	db2 "CloudHub/db"
+	"CloudHub/internal/queue"
 	"database/sql"
 	"log"
 )
@@ -11,7 +12,9 @@ import (
 func main() {
 	db, _ := db2.NewPostgreSqlStorage(config.Envs.ConnString)
 
-	app := api.NewApplication(config.Envs.Port, db)
+	rdb := queue.NewRedisClient()
+
+	app := api.NewApplication(config.Envs.Port, db, rdb)
 
 	initStorage(db)
 

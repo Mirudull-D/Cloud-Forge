@@ -1,7 +1,10 @@
 package api
 
 import (
+	"CloudHub/cmd/worker"
 	"CloudHub/internal/deployments"
+	"CloudHub/internal/queue"
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
@@ -9,16 +12,18 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/redis/go-redis/v9"
 )
 
 // Application app struct def
 type Application struct {
 	addr string
 	db   *sql.DB
+	rdb  *redis.Client
 }
 
-func NewApplication(addr string, db *sql.DB) *Application {
-	return &Application{addr, db}
+func NewApplication(addr string, db *sql.DB, rdb *redis.Client) *Application {
+	return &Application{addr, db, rdb}
 }
 
 func (app *Application) Mount() http.Handler {
@@ -32,8 +37,12 @@ func (app *Application) Mount() http.Handler {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	deploymentStore := deployments.NewStore(app.db)
-	deploymentHandler := deployments.NewHandler(deploymentStore)
+	redisStore := queue.NewRedisStore(app.rdb)
+	deploymentHandler := deployments.NewHandler(deploymentStore, redisStore)
 	deploymentHandler.RegisterRoutes(r)
+
+	Worker := worker.NewWorker(redisStore)
+	go Worker.Run(context.Background())
 
 	return r
 }
