@@ -3,6 +3,7 @@ package api
 import (
 	"CloudHub/cmd/worker"
 	"CloudHub/internal/deployments"
+	"CloudHub/internal/docker"
 	"CloudHub/internal/queue"
 	"context"
 	"database/sql"
@@ -41,7 +42,9 @@ func (app *Application) Mount() http.Handler {
 	deploymentHandler := deployments.NewHandler(deploymentStore, redisStore)
 	deploymentHandler.RegisterRoutes(r)
 
-	Worker := worker.NewWorker(redisStore)
+	cli, _ := docker.NewDockerClient()
+
+	Worker := worker.NewWorker(redisStore, deploymentStore, cli)
 	go Worker.Run(context.Background())
 
 	return r

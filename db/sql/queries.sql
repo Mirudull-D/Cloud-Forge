@@ -11,3 +11,9 @@ FROM deployments ;
 SELECT *
 FROM deployments
 WHERE id = $1;
+
+-- name: ChangeDeploymentStatus :one
+UPDATE deployments
+SET status = 'building'
+WHERE id = $1
+Returning *;

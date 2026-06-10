@@ -11,6 +11,29 @@ import (
 	"github.com/google/uuid"
 )
 
+const changeDeploymentStatus = `-- name: ChangeDeploymentStatus :one
+UPDATE deployments
+SET status = 'building'
+WHERE id = $1
+Returning id, git_url, status, container_id, image_name, logs, created_at, updated_at
+`
+
+func (q *Queries) ChangeDeploymentStatus(ctx context.Context, id uuid.UUID) (Deployment, error) {
+	row := q.db.QueryRowContext(ctx, changeDeploymentStatus, id)
+	var i Deployment
+	err := row.Scan(
+		&i.ID,
+		&i.GitUrl,
+		&i.Status,
+		&i.ContainerID,
+		&i.ImageName,
+		&i.Logs,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createNewDeployment = `-- name: CreateNewDeployment :one
 INSERT INTO deployments(git_url)
 values ($1)
