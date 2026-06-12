@@ -14,14 +14,14 @@ func initConfig() Config {
 	if err != nil {
 		return Config{
 			ConnString: "postgres://mirudull:1234567890@192.168.0.108:5432/cloudhub?sslmode=disable",
-			Port:       ":8080",
+			Port:       ":8081",
 			RedisConn:  "192.168.0.108:6379",
 		}
 	}
 	return Config{
 		ConnString: getEnv("connString",
 			"postgres://mirudull:1234567890@192.168.0.108:5432/cloudhub?sslmode=disable"),
-		Port:      getEnv("port", ":8080"),
+		Port:      getEnv("port", ":8081"),
 		RedisConn: getEnv("redisConn", "192.168.0.108:6379"),
 	}
 }

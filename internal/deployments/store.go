@@ -43,9 +43,10 @@ func (s *Store) GetDeploymentById(ctx context.Context, deploymentID uuid.UUID) (
 	}
 	return deployment, nil
 }
-func (s *Store) UpdateDeploymentStatusToBuilding(ctx context.Context, deploymentID uuid.UUID) error {
-	_, err := s.queries.ChangeDeploymentStatus(ctx, deploymentID)
+func (s *Store) UpdateDeploymentStatusToBuilding(ctx context.Context, deploymentID uuid.UUID) (generated.Deployment, error) {
+	deployment, err := s.queries.ChangeDeploymentStatus(ctx, deploymentID)
 	if err != nil {
-		return err
+		return generated.Deployment{}, err
 	}
+	return deployment, nil
 }
