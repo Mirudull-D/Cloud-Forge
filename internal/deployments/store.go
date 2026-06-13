@@ -43,10 +43,76 @@ func (s *Store) GetDeploymentById(ctx context.Context, deploymentID uuid.UUID) (
 	}
 	return deployment, nil
 }
-func (s *Store) UpdateDeploymentStatusToBuilding(ctx context.Context, deploymentID uuid.UUID) (generated.Deployment, error) {
-	deployment, err := s.queries.ChangeDeploymentStatus(ctx, deploymentID)
+func (s *Store) UpdateDeploymentStatusToBuilding(
+	ctx context.Context, deploymentID uuid.UUID,
+) (generated.Deployment, error) {
+	deployment, err := s.queries.ChangeDeploymentStatusToBuilding(ctx, deploymentID)
 	if err != nil {
 		return generated.Deployment{}, err
 	}
 	return deployment, nil
+}
+func (s *Store) UpdateDeploymentStatusToRunning(
+	ctx context.Context,
+	id uuid.UUID,
+	imageName, containerId string,
+	port int) error {
+	args := generated.ChangeDeploymentStatusToRunningParams{
+		ID: id,
+		ImageName: sql.NullString{
+			String: imageName,
+			Valid:  true,
+		},
+		ContainerID: sql.NullString{
+			String: containerId,
+			Valid:  true,
+		},
+		Port: sql.NullInt32{
+			Int32: int32(port),
+			Valid: true,
+		},
+	}
+
+	_, err := s.queries.ChangeDeploymentStatusToRunning(ctx, args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) GetNextAvailablePort(
+	ctx context.Context,
+) (int, error) {
+
+	var port int
+
+	err := s.db.QueryRowContext(
+		ctx,
+		`
+		SELECT COALESCE(MAX(port), 8080)
+		FROM deployments
+		WHERE port IS NOT NULL
+		`,
+	).Scan(&port)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return port + 1, nil
+}
+
+func (s *Store) UpdateDeploymentStatusToFailed(
+	ctx context.Context, deploymentID uuid.UUID, errorMsg string) error {
+	_, err := s.queries.ChangeDeploymentStatusToFailed(ctx, generated.ChangeDeploymentStatusToFailedParams{
+		ID: deploymentID,
+		ErrorMessage: sql.NullString{
+			String: errorMsg,
+			Valid:  true,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }

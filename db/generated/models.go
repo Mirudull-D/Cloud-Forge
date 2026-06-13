@@ -12,12 +12,13 @@ import (
 )
 
 type Deployment struct {
-	ID          uuid.UUID      `json:"id"`
-	GitUrl      string         `json:"git_url"`
-	Status      string         `json:"status"`
-	ContainerID sql.NullString `json:"container_id"`
-	ImageName   sql.NullString `json:"image_name"`
-	Logs        sql.NullString `json:"logs"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
+	ID           uuid.UUID      `json:"id"`
+	GitUrl       string         `json:"git_url"`
+	Status       string         `json:"status"`
+	ImageName    sql.NullString `json:"image_name"`
+	ContainerID  sql.NullString `json:"container_id"`
+	Port         sql.NullInt32  `json:"port"`
+	ErrorMessage sql.NullString `json:"error_message"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
 }

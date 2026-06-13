@@ -29,6 +29,7 @@ func CreateRepoInTemp(giturl string) (string, error) {
 		)
 	}
 	log.Println("workspace:", tempDir)
+	//TODO make more error handling
 
 	return tempDir, nil
 }

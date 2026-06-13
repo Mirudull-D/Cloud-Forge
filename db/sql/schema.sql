@@ -1,13 +1,24 @@
 CREATE TABLE deployments (
-                             id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                             git_url       TEXT NOT NULL,
-                             status        TEXT NOT NULL DEFAULT 'queued',
+                             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-                             container_id  TEXT,
-                             image_name    TEXT,
+                             git_url TEXT NOT NULL,
 
-                             logs          TEXT,
+                             status TEXT NOT NULL DEFAULT 'queued'
+                                 CHECK (status IN (
+                                                   'queued',
+                                                   'building',
+                                                   'running',
+                                                   'failed',
+                                                   'stopped'
+                                     )),
 
-                             created_at    TIMESTAMP NOT NULL DEFAULT NOW(),
-                             updated_at    TIMESTAMP NOT NULL DEFAULT NOW()
+                             image_name TEXT,
+                             container_id TEXT,
+
+                             port INTEGER UNIQUE,
+
+                             error_message TEXT,
+
+                             created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                             updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

@@ -7,27 +7,125 @@ package generated
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
-const changeDeploymentStatus = `-- name: ChangeDeploymentStatus :one
+const changeDeploymentStatusToBuilding = `-- name: ChangeDeploymentStatusToBuilding :one
 UPDATE deployments
 SET status = 'building'
 WHERE id = $1
-Returning id, git_url, status, container_id, image_name, logs, created_at, updated_at
+Returning id, git_url, status, image_name, container_id, port, error_message, created_at, updated_at
 `
 
-func (q *Queries) ChangeDeploymentStatus(ctx context.Context, id uuid.UUID) (Deployment, error) {
-	row := q.db.QueryRowContext(ctx, changeDeploymentStatus, id)
+func (q *Queries) ChangeDeploymentStatusToBuilding(ctx context.Context, id uuid.UUID) (Deployment, error) {
+	row := q.db.QueryRowContext(ctx, changeDeploymentStatusToBuilding, id)
 	var i Deployment
 	err := row.Scan(
 		&i.ID,
 		&i.GitUrl,
 		&i.Status,
-		&i.ContainerID,
 		&i.ImageName,
-		&i.Logs,
+		&i.ContainerID,
+		&i.Port,
+		&i.ErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const changeDeploymentStatusToFailed = `-- name: ChangeDeploymentStatusToFailed :one
+UPDATE deployments
+SET
+    status = 'failed',
+    error_message = $2
+WHERE id = $1
+    Returning id, git_url, status, image_name, container_id, port, error_message, created_at, updated_at
+`
+
+type ChangeDeploymentStatusToFailedParams struct {
+	ID           uuid.UUID      `json:"id"`
+	ErrorMessage sql.NullString `json:"error_message"`
+}
+
+func (q *Queries) ChangeDeploymentStatusToFailed(ctx context.Context, arg ChangeDeploymentStatusToFailedParams) (Deployment, error) {
+	row := q.db.QueryRowContext(ctx, changeDeploymentStatusToFailed, arg.ID, arg.ErrorMessage)
+	var i Deployment
+	err := row.Scan(
+		&i.ID,
+		&i.GitUrl,
+		&i.Status,
+		&i.ImageName,
+		&i.ContainerID,
+		&i.Port,
+		&i.ErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const changeDeploymentStatusToRunning = `-- name: ChangeDeploymentStatusToRunning :one
+UPDATE deployments
+SET
+    status = 'running',
+    image_name = $2,
+    container_id = $3,
+    port = $4,
+    updated_at = NOW()
+WHERE id = $1
+    RETURNING id, git_url, status, image_name, container_id, port, error_message, created_at, updated_at
+`
+
+type ChangeDeploymentStatusToRunningParams struct {
+	ID          uuid.UUID      `json:"id"`
+	ImageName   sql.NullString `json:"image_name"`
+	ContainerID sql.NullString `json:"container_id"`
+	Port        sql.NullInt32  `json:"port"`
+}
+
+func (q *Queries) ChangeDeploymentStatusToRunning(ctx context.Context, arg ChangeDeploymentStatusToRunningParams) (Deployment, error) {
+	row := q.db.QueryRowContext(ctx, changeDeploymentStatusToRunning,
+		arg.ID,
+		arg.ImageName,
+		arg.ContainerID,
+		arg.Port,
+	)
+	var i Deployment
+	err := row.Scan(
+		&i.ID,
+		&i.GitUrl,
+		&i.Status,
+		&i.ImageName,
+		&i.ContainerID,
+		&i.Port,
+		&i.ErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const changeDeploymentStatusToStopped = `-- name: ChangeDeploymentStatusToStopped :one
+UPDATE deployments
+SET status = 'stopped'
+WHERE id = $1
+    Returning id, git_url, status, image_name, container_id, port, error_message, created_at, updated_at
+`
+
+func (q *Queries) ChangeDeploymentStatusToStopped(ctx context.Context, id uuid.UUID) (Deployment, error) {
+	row := q.db.QueryRowContext(ctx, changeDeploymentStatusToStopped, id)
+	var i Deployment
+	err := row.Scan(
+		&i.ID,
+		&i.GitUrl,
+		&i.Status,
+		&i.ImageName,
+		&i.ContainerID,
+		&i.Port,
+		&i.ErrorMessage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -35,9 +133,9 @@ func (q *Queries) ChangeDeploymentStatus(ctx context.Context, id uuid.UUID) (Dep
 }
 
 const createNewDeployment = `-- name: CreateNewDeployment :one
-INSERT INTO deployments(git_url)
-values ($1)
-Returning id, git_url, status, container_id, image_name, logs, created_at, updated_at
+INSERT INTO deployments(git_url,status)
+values ($1,'queued')
+Returning id, git_url, status, image_name, container_id, port, error_message, created_at, updated_at
 `
 
 func (q *Queries) CreateNewDeployment(ctx context.Context, gitUrl string) (Deployment, error) {
@@ -47,9 +145,10 @@ func (q *Queries) CreateNewDeployment(ctx context.Context, gitUrl string) (Deplo
 		&i.ID,
 		&i.GitUrl,
 		&i.Status,
-		&i.ContainerID,
 		&i.ImageName,
-		&i.Logs,
+		&i.ContainerID,
+		&i.Port,
+		&i.ErrorMessage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -57,7 +156,7 @@ func (q *Queries) CreateNewDeployment(ctx context.Context, gitUrl string) (Deplo
 }
 
 const getAllDeployments = `-- name: GetAllDeployments :many
-SELECT id, git_url, status, container_id, image_name, logs, created_at, updated_at
+SELECT id, git_url, status, image_name, container_id, port, error_message, created_at, updated_at
 FROM deployments
 `
 
@@ -74,9 +173,10 @@ func (q *Queries) GetAllDeployments(ctx context.Context) ([]Deployment, error) {
 			&i.ID,
 			&i.GitUrl,
 			&i.Status,
-			&i.ContainerID,
 			&i.ImageName,
-			&i.Logs,
+			&i.ContainerID,
+			&i.Port,
+			&i.ErrorMessage,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -94,7 +194,7 @@ func (q *Queries) GetAllDeployments(ctx context.Context) ([]Deployment, error) {
 }
 
 const getDeploymentById = `-- name: GetDeploymentById :one
-SELECT id, git_url, status, container_id, image_name, logs, created_at, updated_at
+SELECT id, git_url, status, image_name, container_id, port, error_message, created_at, updated_at
 FROM deployments
 WHERE id = $1
 `
@@ -106,9 +206,10 @@ func (q *Queries) GetDeploymentById(ctx context.Context, id uuid.UUID) (Deployme
 		&i.ID,
 		&i.GitUrl,
 		&i.Status,
-		&i.ContainerID,
 		&i.ImageName,
-		&i.Logs,
+		&i.ContainerID,
+		&i.Port,
+		&i.ErrorMessage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

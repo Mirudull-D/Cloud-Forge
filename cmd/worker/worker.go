@@ -20,7 +20,10 @@ type Worker struct {
 	DockerClient    *docker.Client
 }
 
-func NewWorker(redisStore *queue.RedisStore, deploymentStore *deployments.Store, client *docker.Client) *Worker {
+func NewWorker(
+	redisStore *queue.RedisStore,
+	deploymentStore *deployments.Store,
+	client *docker.Client) *Worker {
 	return &Worker{
 		RedisStore:      redisStore,
 		DeploymentStore: deploymentStore,
@@ -30,41 +33,50 @@ func NewWorker(redisStore *queue.RedisStore, deploymentStore *deployments.Store,
 
 func (w *Worker) Run(ctx context.Context) {
 	for {
-		deploymentID, err := w.RedisStore.PopDeployment(ctx)
+		idInStr, err := w.RedisStore.PopDeployment(ctx)
 		if err != nil {
 			log.Println("failed to pop deployment:", err)
 			continue
 		}
+		deploymentID, err := uuid.Parse(idInStr)
+		if err != nil {
+			log.Println("invalid deployment id:", idInStr)
+			continue
+		}
 
-		if err := w.processDeployment(ctx, deploymentID); err != nil {
+		if err = w.processDeployment(ctx, deploymentID); err != nil {
+
+			err = w.DeploymentStore.UpdateDeploymentStatusToFailed(ctx, deploymentID, err.Error())
+			if err != nil {
+				log.Println("failed to update deployment status:", err)
+				continue
+			}
+
 			log.Printf(
 				"deployment %s failed: %v",
 				deploymentID,
 				err,
 			)
+
+			continue
 		}
 	}
 }
 
 func (w *Worker) processDeployment(
 	ctx context.Context,
-	deploymentID string,
+	deploymentId uuid.UUID,
 ) error {
 
 	log.Printf(
 		"processing deployment %s",
-		deploymentID,
+		deploymentId,
 	)
-
-	parsedUUID, err := uuid.Parse(deploymentID)
-	if err != nil {
-		return err
-	}
 
 	deployment, err := w.DeploymentStore.
 		UpdateDeploymentStatusToBuilding(
 			ctx,
-			parsedUUID,
+			deploymentId,
 		)
 
 	if err != nil {
@@ -99,10 +111,10 @@ func (w *Worker) processDeployment(
 
 	log.Printf(
 		"dockerfile found for deployment %s",
-		deploymentID,
+		deploymentId,
 	)
 
-	imageName := "cloudhub-" + deploymentID
+	imageName := "cloudhub-" + deploymentId.String()
 
 	err = w.DockerClient.BuildImage(
 		tempDir,
@@ -125,6 +137,15 @@ func (w *Worker) processDeployment(
 
 	log.Println("container started:", containerID)
 	// TODO:
+	err = w.DeploymentStore.UpdateDeploymentStatusToRunning(
+		ctx,
+		deploymentId,
+		imageName,
+		containerID,
+		port)
+	if err != nil {
+		return err
+	}
 	// update deployment status
 	// save container id
 
