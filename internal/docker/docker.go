@@ -6,11 +6,13 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 )
 
 type Client struct {
-	Cli *client.Client
+	cli *client.Client
 }
 
 func NewDockerClient() (*Client, error) {
@@ -29,7 +31,7 @@ func NewDockerClient() (*Client, error) {
 	log.Println("Docker connected Successfully ...!!!!\n \t\t\t\t\tServer Version:", info.ServerVersion)
 
 	return &Client{
-		Cli: cli,
+		cli: cli,
 	}, err
 }
 
@@ -55,4 +57,57 @@ func (c *Client) BuildImage(
 	}
 
 	return nil
+}
+func (c *Client) RunContainer(
+	ctx context.Context,
+	imageName string,
+	hostPort string,
+) (string, error) {
+
+	containerPort, err := nat.NewPort(
+		"tcp",
+		"8080",
+	)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := c.cli.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image: imageName,
+			ExposedPorts: nat.PortSet{
+				containerPort: struct{}{},
+			},
+		},
+		&container.HostConfig{
+			PortBindings: nat.PortMap{
+				containerPort: []nat.PortBinding{
+					{
+						HostIP:   "0.0.0.0",
+						HostPort: hostPort,
+					},
+				},
+			},
+		},
+		nil,
+		nil,
+		"",
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	err = c.cli.ContainerStart(
+		ctx,
+		resp.ID,
+		container.StartOptions{},
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	return resp.ID, nil
 }

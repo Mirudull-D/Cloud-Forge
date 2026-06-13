@@ -112,8 +112,19 @@ func (w *Worker) processDeployment(
 		return err
 	}
 	log.Printf("building sucessfull for image %s", imageName)
+
+	containerID, err := w.DockerClient.RunContainer(
+		ctx,
+		imageName,
+		"8081",
+	)
+
+	if err != nil {
+		return err
+	}
+
+	log.Println("container started:", containerID)
 	// TODO:
-	// containerID, err := w.DockerClient.RunContainer(...)
 	// update deployment status
 	// save container id
 
