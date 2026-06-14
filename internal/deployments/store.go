@@ -89,7 +89,7 @@ func (s *Store) GetNextAvailablePort(
 	err := s.db.QueryRowContext(
 		ctx,
 		`
-		SELECT COALESCE(MAX(port), 8080)
+		SELECT COALESCE(MAX(port), 8081)
 		FROM deployments
 		WHERE port IS NOT NULL
 		`,

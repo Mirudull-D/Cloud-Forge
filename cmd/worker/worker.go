@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/google/uuid"
 )
@@ -55,7 +56,7 @@ func (w *Worker) Run(ctx context.Context) {
 			log.Printf(
 				"deployment %s failed: %v",
 				deploymentID,
-				err,
+				err.Error(),
 			)
 
 			continue
@@ -114,21 +115,26 @@ func (w *Worker) processDeployment(
 		deploymentId,
 	)
 
-	imageName := "cloudhub-" + deploymentId.String()
+	//imageName := "cloudhub-" + deploymentId.String()
 
-	err = w.DockerClient.BuildImage(
-		tempDir,
-		imageName,
-	)
+	imageName := "cloudhub-7f79e8bd-22e8-4c96-81f8-1118b39611ac"
+	//err = w.DockerClient.BuildImage(
+	//	tempDir,
+	//	imageName,
+	//)
+	//if err != nil {
+	//	return err
+	//}
+	//log.Printf("building successful for image %s", imageName)
+	port, err := w.DeploymentStore.GetNextAvailablePort(ctx)
 	if err != nil {
 		return err
 	}
-	log.Printf("building sucessfull for image %s", imageName)
 
 	containerID, err := w.DockerClient.RunContainer(
 		ctx,
 		imageName,
-		"8081",
+		strconv.Itoa(port),
 	)
 
 	if err != nil {
@@ -136,7 +142,7 @@ func (w *Worker) processDeployment(
 	}
 
 	log.Println("container started:", containerID)
-	// TODO:
+
 	err = w.DeploymentStore.UpdateDeploymentStatusToRunning(
 		ctx,
 		deploymentId,
@@ -146,8 +152,5 @@ func (w *Worker) processDeployment(
 	if err != nil {
 		return err
 	}
-	// update deployment status
-	// save container id
-
 	return nil
 }
