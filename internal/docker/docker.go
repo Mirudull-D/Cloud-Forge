@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 )
@@ -110,4 +111,60 @@ func (c *Client) RunContainer(
 	}
 
 	return resp.ID, nil
+}
+
+func (c *Client) StopContainer(ctx context.Context, containerID string) error {
+	if err := c.cli.ContainerStop(
+		ctx,
+		containerID,
+		container.StopOptions{
+			Timeout: new(10),
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) RemoveContainer(ctx context.Context, containerID string) error {
+	err := c.cli.ContainerRemove(
+		ctx,
+		containerID,
+		container.RemoveOptions{
+			Force: true,
+		})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) RemoveImage(ctx context.Context, imageName string) error {
+	_, err := c.cli.ImageRemove(
+		ctx,
+		imageName,
+		image.RemoveOptions{
+			Force: true,
+		})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (c *Client) RestartContainer(ctx context.Context, containerID string) error {
+	err := c.cli.ContainerRestart(ctx, containerID, container.StopOptions{
+		Timeout: new(10),
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (c *Client) InspectContainer(
+	ctx context.Context, containerID string) (container.InspectResponse, error) {
+	inspect, err := c.cli.ContainerInspect(ctx, containerID)
+	if err != nil {
+		return container.InspectResponse{}, err
+	}
+	return inspect, nil
 }

@@ -39,10 +39,9 @@ func (app *Application) Mount() http.Handler {
 
 	deploymentStore := deployments.NewStore(app.db)
 	redisStore := queue.NewRedisStore(app.rdb)
-	deploymentHandler := deployments.NewHandler(deploymentStore, redisStore)
-	deploymentHandler.RegisterRoutes(r)
-
 	cli, _ := docker.NewDockerClient()
+	deploymentHandler := deployments.NewHandler(deploymentStore, redisStore, cli)
+	deploymentHandler.RegisterRoutes(r)
 
 	Worker := worker.NewWorker(redisStore, deploymentStore, cli)
 	go Worker.Run(context.Background())

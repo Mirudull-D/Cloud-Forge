@@ -42,3 +42,13 @@ UPDATE deployments
 SET status = 'stopped'
 WHERE id = $1
     Returning *;
+-- name: DeleteDeployment :exec
+DELETE FROM deployments
+WHERE id =$1;
+
+-- name: DeleteContainer :one
+UPDATE deployments
+SET
+    container_id = NULL
+WHERE id = $1
+    Returning *;

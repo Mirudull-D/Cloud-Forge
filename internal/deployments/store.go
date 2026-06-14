@@ -116,3 +116,22 @@ func (s *Store) UpdateDeploymentStatusToFailed(
 	}
 	return nil
 }
+
+func (s *Store) DeleteDeployment(
+	ctx context.Context, deploymentID uuid.UUID) error {
+	err := s.queries.DeleteDeployment(ctx, deploymentID)
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func (s *Store) DeleteContainer(
+	ctx context.Context, deploymentID uuid.UUID) (generated.Deployment, error) {
+	container, err := s.queries.DeleteContainer(ctx, deploymentID)
+	if err != nil {
+		return generated.Deployment{}, err
+	}
+	return container, nil
+}

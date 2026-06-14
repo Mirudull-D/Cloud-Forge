@@ -155,6 +155,41 @@ func (q *Queries) CreateNewDeployment(ctx context.Context, gitUrl string) (Deplo
 	return i, err
 }
 
+const deleteContainer = `-- name: DeleteContainer :one
+UPDATE deployments
+SET
+    container_id = NULL
+WHERE id = $1
+    Returning id, git_url, status, image_name, container_id, port, error_message, created_at, updated_at
+`
+
+func (q *Queries) DeleteContainer(ctx context.Context, id uuid.UUID) (Deployment, error) {
+	row := q.db.QueryRowContext(ctx, deleteContainer, id)
+	var i Deployment
+	err := row.Scan(
+		&i.ID,
+		&i.GitUrl,
+		&i.Status,
+		&i.ImageName,
+		&i.ContainerID,
+		&i.Port,
+		&i.ErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteDeployment = `-- name: DeleteDeployment :exec
+DELETE FROM deployments
+WHERE id =$1
+`
+
+func (q *Queries) DeleteDeployment(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteDeployment, id)
+	return err
+}
+
 const getAllDeployments = `-- name: GetAllDeployments :many
 SELECT id, git_url, status, image_name, container_id, port, error_message, created_at, updated_at
 FROM deployments
